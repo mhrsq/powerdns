@@ -45,10 +45,10 @@ install_powerdns_recursor() {
     log_message "Configuring PowerDNS Recursor..."
     cat <<EOF > /etc/powerdns/recursor.conf
 allow-from=127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8
-forward-zones=.=8.8.8.8;8.8.4.4
 local-address=0.0.0.0
 local-port=53
 quiet=no
+hint-file=/usr/share/dns/root.hints
 EOF
 #    systemctl restart pdns-recursor
 #    systemctl enable pdns-recursor
