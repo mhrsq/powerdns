@@ -51,6 +51,19 @@ webserver-address=127.0.0.1
 webserver-port=8082
 webserver-loglevel=normal
 
+# Enable root hint
+hint-file=/usr/share/dns/root.hints
+
+# Enable Hyperlocal Root Zones
+include-dir=/etc/powerdns/hyperlocal
+EOF
+
+mkdir -p /etc/powerdns/hyperlocal
+cat <<EOF > /etc/powerdns/hyperlocal/root.zone
+. 86400 IN SOA root. root.localhost. 1 86400 7200 604800 86400
+. 86400 IN NS localhost.
+localhost. 86400 IN A 127.0.0.1
+localhost. 86400 IN AAAA ::1
 EOF
 
 echo "[+] Restarting pdns-recursor..."
