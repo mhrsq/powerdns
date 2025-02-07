@@ -6,6 +6,18 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+echo "[+] Checking for existing services using port 53..."
+EXISTING_SERVICE=$(ss -tulpn | grep ':53 ' | awk '{print $NF}' | cut -d'"' -f2 | sort -u)
+if [[ -n "$EXISTING_SERVICE" ]]; then
+  echo "[!] Port 53 is already in use by: $EXISTING_SERVICE"
+  echo "[+] Stopping and disabling the conflicting service(s)..."
+  systemctl stop $EXISTING_SERVICE
+  systemctl disable $EXISTING_SERVICE
+  echo "[+] Service(s) stopped and disabled. Proceeding with PowerDNS setup."
+else
+  echo "[+] Port 53 is free. Proceeding with PowerDNS setup."
+fi
+
 echo "[+] Updating package repositories..."
 apt-get update
 
@@ -124,6 +136,7 @@ ip6tables -A INPUT -p tcp --dport 443 -m recent --rcheck --name AUTHORIZED -j AC
 netfilter-persistent save > /dev/null 2>&1
 
 echo "[+] Firewall configuration completed with port knocking enabled for SSH, HTTP, and HTTPS."
+echo "[+] Port Knocking Sequence: 50000 -> 51000 -> 52000 -> SSH/HTTP/HTTPS"
 echo "----------------------------------"
 echo "--- General Access Information ---"
 echo "Public IPv4: $PUBLIC_IPV4"
