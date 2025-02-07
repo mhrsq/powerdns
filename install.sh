@@ -34,8 +34,16 @@ echo "[+] Detecting IP Addresses"
 PUBLIC_IPV4=$(curl -s -4 ifconfig.me || curl -s ifconfig.co)
 #PUBLIC_IPV6=$(curl -s -6 ifconfig.co || echo "No IPv6 detected")
 
-# Detect Private IPv4 and IPv6 Networks
-PRIVATE_IPV4=$(hostname -I | awk '{print $1}')
+# Detect Private IPv4
+ALL_IPV4=$(hostname -I | tr ' ' '
+' | grep -oP '([0-9]{1,3}\.){3}[0-9]{1,3}')
+for ip in $ALL_IPV4; do
+    if [[ $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. || $ip =~ ^192\.168\. ]]; then
+        PRIVATE_IPV4=$ip
+    else
+        PUBLIC_IPV4=$ip
+    fi
+done
 IPV6=$(ip -6 addr show scope global | awk '/inet6/ {print $2}' | head -n 1)
 
 if [[ -z "$PRIVATE_IPV6" ]]; then
@@ -145,6 +153,5 @@ echo "[+] Port Knocking Sequence: 50000 -> 51000 -> 52000 -> SSH/HTTP/HTTPS"
 echo "----------------------------------"
 echo "--- General Access Information ---"
 echo "Public IPv4: $PUBLIC_IPV4"
-echo "Public IPv6: $PUBLIC_IPV6"
 echo "Private IPv4: $PRIVATE_IPV4"
-echo "Private IPv6: $PRIVATE_IPV6"
+echo "IPv6: $PRIVATE_IPV6"
