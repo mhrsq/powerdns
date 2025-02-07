@@ -11,8 +11,13 @@ EXISTING_SERVICE=$(ss -tulpn | grep ':53 ' | awk '{print $NF}' | cut -d'"' -f2 |
 if [[ -n "$EXISTING_SERVICE" ]]; then
   echo "[!] Port 53 is already in use by: $EXISTING_SERVICE"
   echo "[+] Stopping and disabling the conflicting service(s)..."
-  systemctl stop $EXISTING_SERVICE
-  systemctl disable $EXISTING_SERVICE
+  if [ "$EXISTING_SERVICE" == "systemd-resolve" ]; then
+      systemctl stop systemd-resolved
+      systemctl disable systemd-resolved
+  else
+      systemctl stop $EXISTING_SERVICE
+      systemctl disable $EXISTING_SERVICE
+  fi
   echo "[+] Service(s) stopped and disabled. Proceeding with PowerDNS setup."
 else
   echo "[+] Port 53 is free. Proceeding with PowerDNS setup."
@@ -26,8 +31,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-recursor curl iptables-pe
 
 echo "[+] Detecting IP Addresses"
 # Detect Public IPv4 and IPv6 addresses
-PUBLIC_IPV4=$(curl -s ifconfig.me || curl -s icanhazip.com)
-PUBLIC_IPV6=$(curl -s -6 ifconfig.me || echo "No IPv6 detected")
+PUBLIC_IPV4=$(curl -s ifconfig.me || curl -s ifconfig.co)
+PUBLIC_IPV6=$(curl -s -6 iifconfig.co || echo "No IPv6 detected")
 
 # Detect Private IPv4 and IPv6 Networks
 PRIVATE_IPV4=$(hostname -I | awk '{print $1}')
