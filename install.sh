@@ -31,8 +31,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-recursor curl iptables-pe
 
 echo "[+] Detecting IP Addresses"
 # Detect Public IPv4 and IPv6 addresses
-PUBLIC_IPV4=$(curl -s ifconfig.me || curl -s ifconfig.co)
-PUBLIC_IPV6=$(curl -s -6 iifconfig.co || echo "No IPv6 detected")
+PUBLIC_IPV4=$(curl -s -4 ifconfig.me || curl -s ifconfig.co)
+PUBLIC_IPV6=$(curl -s -6 ifconfig.co || echo "No IPv6 detected")
 
 # Detect Private IPv4 and IPv6 Networks
 PRIVATE_IPV4=$(hostname -I | awk '{print $1}')
