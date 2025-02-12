@@ -98,9 +98,51 @@ systemctl restart pdns-recursor
 echo "[+] Enabling pdns-recursor service..."
 systemctl enable pdns-recursor
 
+echo "[+] Configuring iptables for knocking port before accessing SSH/HTTP/HTTPS
+KNOCK_PORTS=(50000 51000 52000)
+KNOCK_TIMEOUT=20
+# Flush existing rules
+iptables -F
+ip6tables -F
+# Default drop policy
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+ip6tables -P INPUT DROP
+ip6tables -P FORWARD DROP
+ip6tables -P OUTPUT ACCEPT
+# Allow localhost traffic
+iptables -A INPUT -i lo -j ACCEPT
+ip6tables -A INPUT -i lo -j ACCEPT
+# Allow established and related connections
+iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+ip6tables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+# Allow DNS service without port knocking
+iptables -A INPUT -p tcp --dport 53 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 53 -j ACCEPT
+ip6tables -A INPUT -p udp --dport 53 -j ACCEPT
+# Allow Port Knocking sequence for SSH, HTTP, and HTTPS
+iptables -N KNOCKING
+iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[0]} -m recent --name KNOCK1 --set -j DROP
+iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[1]} -m recent --rcheck --seconds $KNOCK_TIMEOUT --name KNOCK1 -m recent --name KNOCK2 --set -j DROP
+iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[2]} -m recent --rcheck --seconds $KNOCK_TIMEOUT --name KNOCK2 -m recent --name AUTHORIZED --set -j DROP
+# Allow access to SSH, HTTP, and HTTPS after successful knocking
+iptables -A INPUT -p tcp --dport 22 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 22 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 80 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 443 -m recent --rcheck --name AUTHORIZED -j ACCEPT
+
 echo "[+] Installation and configuration completed following KINDNS best practices. below are the current pdns-recursor status:"
 systemctl status pdns-recursor | grep -i active
 
+echo "[+] Firewall configuration completed with port knocking enabled for SSH, HTTP, and HTTPS."
+echo "[+] Port Knocking Sequence: 50000 -> 51000 -> 52000 -> SSH/HTTP/HTTPS"
+echo "[+] Use this command to knocking the port (from linux machine)
+echo "nc -nzv -w 2 69.30.248.206 50000;nc -nzv -w 2 69.30.248.206 51000;nc -nzv -w 2 69.30.248.206 52000;nc -nzv -w 2 69.30.248.206 22
+echo ""
 echo "----------------------------------"
 echo "--- General Access Information ---"
 echo "Public IPv4: $PUBLIC_IPV4"
