@@ -98,7 +98,7 @@ systemctl restart pdns-recursor
 echo "[+] Enabling pdns-recursor service..."
 systemctl enable pdns-recursor
 
-echo "[+] Configuring iptables for knocking port before accessing SSH/HTTP/HTTPS
+echo "[+] Configuring iptables for knocking port before accessing SSH/HTTP/HTTPS"
 KNOCK_PORTS=(50000 51000 52000)
 KNOCK_TIMEOUT=20
 # Flush existing rules
