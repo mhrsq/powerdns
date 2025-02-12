@@ -61,7 +61,9 @@ quiet=no
 local-address=0.0.0.0,::0
 
 # Allow queries from localhost and local network (adjust as needed)
-allow-from=0.0.0.0/0
+allow-from=0.0.0.0/0, ::/0
+local-port=53
+forward-zones=mydomain.local=127.0.0.1:54
 
 # Enable DNSSEC validation
 dnssec=validate
@@ -149,3 +151,61 @@ echo "--- General Access Information ---"
 echo "Public IPv4: $PUBLIC_IPV4"
 echo "Private IPv4: $PRIVATE_IPV4"
 echo "IPv6: $PUBLIC_IPV6"
+
+echo "[+] PowerDNS Recursor succesfully"
+echo "[+] Installing pdns-server and pdns-backend-mysql"
+apt-get install pdns-server pdns-backend-mysql -y
+
+cat <<EOF > /etc/powerdns/pdns.conf
+local-port=54
+
+launch=gmysql
+gmysql-host=127.0.0.1
+gmysql-user=root
+gmysql-dbname=pdns
+gmysql-password=mysecretpassword
+EOF
+
+#Part of Mysql Installation
+apt install mariadb-server mariadb-client -y
+
+#Part of Mysql Configuration
+
+
+#Part of PowerDNS-Admin Installation
+apt install python3.11 python3.11-venv python3.11-dev -y
+apt install -y git libmariadb-dev libsasl2-dev libldap2-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev libffi-dev libpq-dev pkg-config apt-transport-https build-essential curl
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+apt install -y nodejs
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+apt update -y
+apt install yarn -y
+git clone https://github.com/ngoduykhanh/PowerDNS-Admin.git /opt/web/powerdns-admin
+cd /opt/web/powerdns-admin
+python3.11 -mvenv ./venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+
+#Part of Config & Run PowerDNS-Admin
+
+
+#Part of Create Services
+cat <<EOF > /etc/systemd/system/powerdns-admin.service
+[Unit]
+Description=PowerDNS-Admin
+Requires=powerdns-admin.socket
+After=network.target
+[Service]
+User=root
+Group=root
+PIDFile=/run/powerdns-admin/pid
+WorkingDirectory=/opt/web/powerdns-admin
+ExecStartPre=/bin/bash -c '$$(mkdir -p /run/powerdns-admin/)'
+ExecStart=/opt/web/powerdns-admin/venv/bin/gunicorn --pid /run/powerdns-admin/pid --bind unix:/run/powerdns-admin/socket 'powerdnsadmin:create_app()'
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target
+EOF
