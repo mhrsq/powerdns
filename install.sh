@@ -5,6 +5,12 @@ if [[ $EUID -ne 0 ]]; then
   echo "[+] Please run this script as root (sudo)."
   exit 1
 fi
+echo "[+] Updating package repositories..."
+apt-get update
+echo "[+] Detecting IP Addresses"
+# Detect Public IPv4 and IPv6 addresses
+PUBLIC_IPV4=$(curl -4 ifconfig.me)
+PUBLIC_IPV6=$(curl -6 ifconfig.me)
 
 echo "[+] Checking for existing services using port 53..."
 EXISTING_SERVICE=$(ss -tulpn | grep ':53 ' | awk '{print $NF}' | cut -d'"' -f2 | sort -u)
@@ -23,8 +29,8 @@ else
   echo "[+] Port 53 is free. Proceeding with PowerDNS setup."
 fi
 
-echo "[+] Updating package repositories..."
-apt-get update
+#echo "[+] Updating package repositories..."
+#apt-get update
 
 echo "[+] Installing pdns-recursor and required packages..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-recursor curl iptables-persistent
