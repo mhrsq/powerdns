@@ -58,10 +58,10 @@ cat <<EOF > /etc/powerdns/recursor.conf
 quiet=no
 
 # Listen on all IPv4 addresses
-local-address=0.0.0.0
+local-address=0.0.0.0,::0
 
 # Allow queries from localhost and local network (adjust as needed)
-#allow-from=127.0.0.1,$PRIVATE_IPV4/24
+allow-from=0.0.0.0/0
 
 # Enable DNSSEC validation
 dnssec=validate
