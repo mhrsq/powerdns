@@ -28,11 +28,12 @@ apt-get update
 
 echo "[+] Installing pdns-recursor and required packages..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-recursor curl iptables-persistent
+cp /etc/powerdns/recursor.conf /root/recursor_backup.conf
 
 echo "[+] Detecting IP Addresses"
 # Detect Public IPv4 and IPv6 addresses
-PUBLIC_IPV4=$(curl -s -4 ifconfig.me || curl -s ifconfig.co)
-#PUBLIC_IPV6=$(curl -s -6 ifconfig.co || echo "No IPv6 detected")
+PUBLIC_IPV4=$(curl -4 ifconfig.me)
+PUBLIC_IPV6=$(curl -6 ifconfig.me)
 
 # Detect Private IPv4
 ALL_IPV4=$(hostname -I | tr ' ' '
@@ -44,7 +45,7 @@ for ip in $ALL_IPV4; do
         PUBLIC_IPV4=$ip
     fi
 done
-IPV6=$(ip -6 addr show scope global | awk '/inet6/ {print $2}' | head -n 1)
+old_IPV6=$(ip -6 addr show scope global | awk '/inet6/ {print $2}' | head -n 1)
 
 if [[ -z "$PRIVATE_IPV6" ]]; then
   PRIVATE_IPV6="No IPv6 detected"
@@ -59,7 +60,7 @@ quiet=no
 local-address=0.0.0.0
 
 # Allow queries from localhost and local network (adjust as needed)
-allow-from=127.0.0.1,$PRIVATE_IPV4/24
+#allow-from=127.0.0.1,$PRIVATE_IPV4/24
 
 # Enable DNSSEC validation
 dnssec=validate
@@ -100,58 +101,8 @@ systemctl enable pdns-recursor
 echo "[+] Installation and configuration completed following KINDNS best practices. below are the current pdns-recursor status:"
 systemctl status pdns-recursor | grep -i active
 
-echo "[+] Configuring Firewall with Port Knocking..."
-# Define knock sequence (high ports)
-KNOCK_PORTS=(50000 51000 52000)
-KNOCK_TIMEOUT=20
-
-# Flush existing rules
-iptables -F
-ip6tables -F
-
-# Default drop policy
-iptables -P INPUT DROP
-iptables -P FORWARD DROP
-iptables -P OUTPUT ACCEPT
-ip6tables -P INPUT DROP
-ip6tables -P FORWARD DROP
-ip6tables -P OUTPUT ACCEPT
-
-# Allow localhost traffic
-iptables -A INPUT -i lo -j ACCEPT
-ip6tables -A INPUT -i lo -j ACCEPT
-
-# Allow established and related connections
-iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-ip6tables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-# Allow DNS service without port knocking
-iptables -A INPUT -p tcp --dport 53 -j ACCEPT
-iptables -A INPUT -p udp --dport 53 -j ACCEPT
-ip6tables -A INPUT -p tcp --dport 53 -j ACCEPT
-ip6tables -A INPUT -p udp --dport 53 -j ACCEPT
-
-# Allow Port Knocking sequence for SSH, HTTP, and HTTPS
-iptables -N KNOCKING
-iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[0]} -m recent --name KNOCK1 --set -j DROP
-iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[1]} -m recent --rcheck --seconds $KNOCK_TIMEOUT --name KNOCK1 -m recent --name KNOCK2 --set -j DROP
-iptables -A INPUT -p tcp --dport ${KNOCK_PORTS[2]} -m recent --rcheck --seconds $KNOCK_TIMEOUT --name KNOCK2 -m recent --name AUTHORIZED --set -j DROP
-
-# Allow access to SSH, HTTP, and HTTPS after successful knocking
-iptables -A INPUT -p tcp --dport 22 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-ip6tables -A INPUT -p tcp --dport 22 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-ip6tables -A INPUT -p tcp --dport 80 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-ip6tables -A INPUT -p tcp --dport 443 -m recent --rcheck --name AUTHORIZED -j ACCEPT
-
-# Save firewall rules
-netfilter-persistent save > /dev/null 2>&1
-
-echo "[+] Firewall configuration completed with port knocking enabled for SSH, HTTP, and HTTPS."
-echo "[+] Port Knocking Sequence: 50000 -> 51000 -> 52000 -> SSH/HTTP/HTTPS"
 echo "----------------------------------"
 echo "--- General Access Information ---"
 echo "Public IPv4: $PUBLIC_IPV4"
 echo "Private IPv4: $PRIVATE_IPV4"
-echo "IPv6: $PRIVATE_IPV6"
+echo "IPv6: $PUBLIC_IPV6"
