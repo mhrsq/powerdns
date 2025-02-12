@@ -141,7 +141,7 @@ systemctl status pdns-recursor | grep -i active
 echo "[+] Firewall configuration completed with port knocking enabled for SSH, HTTP, and HTTPS."
 echo "[+] Port Knocking Sequence: 50000 -> 51000 -> 52000 -> SSH/HTTP/HTTPS"
 echo "[+] Use this command to knocking the port (from linux machine)
-echo "nc -nzv -w 2 69.30.248.206 50000;nc -nzv -w 2 69.30.248.206 51000;nc -nzv -w 2 69.30.248.206 52000;nc -nzv -w 2 69.30.248.206 22
+echo "nc -nzv -w 2 $PUBLIC_IPV4 50000;nc -nzv -w 2 $PUBLIC_IPV4 51000;nc -nzv -w 2 $PUBLIC_IPV4 52000;nc -nzv -w 2 $PUBLIC_IPV4 22
 echo ""
 echo "----------------------------------"
 echo "--- General Access Information ---"
