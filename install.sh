@@ -36,11 +36,6 @@ echo "[+] Installing pdns-recursor and required packages..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-recursor curl iptables-persistent
 cp /etc/powerdns/recursor.conf /root/recursor_backup.conf
 
-echo "[+] Detecting IP Addresses"
-# Detect Public IPv4 and IPv6 addresses
-PUBLIC_IPV4=$(curl -4 ifconfig.me)
-PUBLIC_IPV6=$(curl -6 ifconfig.me)
-
 # Detect Private IPv4
 ALL_IPV4=$(hostname -I | tr ' ' '
 ' | grep -oP '([0-9]{1,3}\.){3}[0-9]{1,3}')
